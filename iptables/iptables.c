@@ -1292,7 +1292,7 @@ int do_command4(int argc, char *argv[], char **table,
 	struct in_addr *daddrs = NULL, *dmasks = NULL;
 
 	int verbose = 0;
-	bool wait = false;
+	bool wait = restore?false:true; // IKSWL-19621 enable -w by default, except for iptables-restore
 	const char *chain = NULL;
 	const char *shostnetworkmask = NULL, *dhostnetworkmask = NULL;
 	const char *policy = NULL, *newname = NULL;

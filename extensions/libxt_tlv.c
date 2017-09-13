@@ -15,6 +15,7 @@ enum {
 
 enum {
 	O_TOKEN = 0,
+	O_NOTIFY,
 	O_TLV_DATA
 };
 
@@ -27,16 +28,26 @@ union xt_tlv_entry {
 	uint32_t entry_hdr[ENTRY_HEADER_SIZE];
 };
 
+static void tlv_init(struct xt_entry_match *match)
+{
+	struct xt_tlv_info *info = (struct xt_tlv_info *)match->data;
+	info->token = 0xffffffff;
+	info->notify = 0;
+}
+
 static void tlv_mt_help(void)
 {
 	printf( "tlv match options:\n"
 		"  --token the token of the data parsed\n"
+		"  --notify send notify or NFLOG message\n"
 		"  --tlv-data the tlv data should be matched\n");
 }
 
 static const struct xt_option_entry tlv_mt_opts[] = {
 	{.name = "token", .id = O_TOKEN, .type = XTTYPE_UINT32,
-		.flags = XTOPT_MAND},
+		.flags = XTOPT_PUT, XTOPT_POINTER(struct xt_tlv_info, token)},
+	{.name = "notify", .id = O_NOTIFY, .type = XTTYPE_UINT32,
+		.flags = XTOPT_PUT, XTOPT_POINTER(struct xt_tlv_info, notify)},
 	{.name = "tlv-data", .id = O_TLV_DATA, .type = XTTYPE_STRING,
 		.flags = XTOPT_MAND},
 	XTOPT_TABLEEND,
@@ -212,13 +223,6 @@ static void tlv_mt_parse(struct xt_option_call *cb)
 	xtables_option_parse(cb);
 
 	switch (cb->entry->id) {
-		case O_TOKEN:
-			if (cb->arg != NULL) {
-				if (!xtables_strtoui(cb->arg, NULL, &info->token, 0, UINT32_MAX - 1))
-					xtables_param_act(XTF_BAD_VALUE, "tlv", "--token", cb->arg);
-			}
-			break;
-
 		case O_TLV_DATA:
 			if (cb->arg != NULL) {
 				parse_match_data(info, cb->arg);
@@ -231,16 +235,16 @@ static void tlv_mt_check(struct xt_fcheck_call *cb)
 {
 	if (cb->xflags == 0)
 		xtables_error(PARAMETER_PROBLEM,
-			      "tlv match: both '--token' and '--tlv-data' are required\n");
+			      "tlv match: '--token', '--notify' and '--tlv-data' are required\n");
 }
 
-	static void
-tlv_mt_print(const void *ip, const struct xt_entry_match *match,
+static void tlv_mt_print(const void *ip, const struct xt_entry_match *match,
 		int numeric)
 {
 	int i;
 	const struct xt_tlv_info *info = (const void*)match->data;
 	printf(" --token:%d", info->token);
+	printf(" --notify:%d", info->notify);
 	printf(" --tlv-data len:%d entries:%d\n",
 			info->data_len, info->entries);
 }
@@ -250,6 +254,7 @@ static void tlv_mt_save(const void *ip, const struct xt_entry_match *match)
 	int i;
 	const struct xt_tlv_info *info = (const void*)match->data;
 	printf(" --token:%d", info->token);
+	printf(" --notify:%d", info->notify);
 	printf(" --tlv-data len:%d entries:%d\n",
 			info->data_len, info->entries);
 }
@@ -262,6 +267,7 @@ static struct xtables_match tlv_mt_reg[] = {
 		.family        = NFPROTO_IPV4,
 		.size          = XT_ALIGN(sizeof(struct xt_tlv_info)),
 		.userspacesize = XT_ALIGN(sizeof(struct xt_tlv_info)),
+		.init          = tlv_init,
 		.help          = tlv_mt_help,
 		.x6_parse      = tlv_mt_parse,
 		.x6_fcheck     = tlv_mt_check,
@@ -276,6 +282,7 @@ static struct xtables_match tlv_mt_reg[] = {
 		.family        = NFPROTO_IPV6,
 		.size          = XT_ALIGN(sizeof(struct xt_tlv_info)),
 		.userspacesize = XT_ALIGN(sizeof(struct xt_tlv_info)),
+		.init          = tlv_init,
 		.help          = tlv_mt_help,
 		.x6_parse      = tlv_mt_parse,
 		.x6_fcheck     = tlv_mt_check,

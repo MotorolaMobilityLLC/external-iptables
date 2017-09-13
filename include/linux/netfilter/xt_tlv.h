@@ -7,6 +7,8 @@
 
 struct xt_tlv_info {
 	uint32_t token;
+	/*  whether sending notification to userspace */
+	uint32_t notify;
 	/*  it's the all key data length of the red packet */
 	uint16_t data_len;
 	/*  the number of the entry */
